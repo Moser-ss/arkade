@@ -12,18 +12,29 @@ on:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        go-version: [1.18.x]
-        os: [ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v3
+      - name: Get Go version from go.mod
+        shell: bash
+        run: |
+          echo ::set-output name=version::$(grep '^go ' go.mod| cut -d ' ' -f 2)
+        id: gomod
+
+      - name: Setup Go
+        uses: actions/setup-go@v2
         with:
-          fetch-depth: 1
-      - name: Install Go
-        uses: actions/setup-go@v3
+          go-version: "${{ steps.gomod.outputs.version }}"
+
+      - name: Cache go pkg
+        uses: actions/cache@v2
         with:
-          go-version: ${{ matrix.go-version }}
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+            
       - name: Run URL checker tests
         run: make e2e
