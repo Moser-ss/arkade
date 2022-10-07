@@ -2,6 +2,8 @@ Version := $(shell git describe --tags --dirty)
 GitCommit := $(shell git rev-parse HEAD)
 LDFLAGS := "-s -w -X github.com/alexellis/arkade/cmd.Version=$(Version) -X github.com/alexellis/arkade/cmd.GitCommit=$(GitCommit)"
 PLATFORM := $(shell ./hack/platform-tag.sh)
+GOLANG_LINTER="./bin/golangci-lint"
+GOLANGCI_VERSION=v1.50.0
 SOURCE_DIRS = cmd pkg main.go
 export GO111MODULE=on
 
@@ -37,3 +39,15 @@ dist:
 .PHONY: hash
 hash:
 	rm -rf bin/*.sha256 && ./hack/hashgen.sh
+
+
+.PHONY: lint
+## lint: lints using golangci
+lint: installlint
+	@ $(GOLANG_LINTER) run ./...
+
+.PHONY: installlint
+installlint:
+	mkdir -p bin
+	@[ ! -f "./bin/golangci-lint" ] && echo "Installing linter..." || true
+	@[ ! -f "./bin/golangci-lint" ] && curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ./bin ${GOLANGCI_VERSION} >/dev/null 2>&1 || true
